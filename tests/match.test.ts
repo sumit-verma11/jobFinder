@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseScoreResponse } from "../src/lib/matching/parseScore";
 import { shouldGenerateCoverNote } from "../src/lib/matching/threshold";
-import { sanitizeCoverNote } from "../src/lib/matching/sanitizeCoverNote";
+import { sanitizeCoverNote, containsSensitiveInfo } from "../src/lib/matching/sanitizeCoverNote";
 
 describe("parseScoreResponse", () => {
   it("parses a valid plain JSON response", () => {
@@ -78,5 +78,27 @@ describe("sanitizeCoverNote", () => {
 
   it("strips surrounding quotes", () => {
     expect(sanitizeCoverNote('"Hi, saw the opening..."')).toBe("Hi, saw the opening...");
+  });
+});
+
+describe("containsSensitiveInfo", () => {
+  it("returns false for a clean cover note", () => {
+    expect(containsSensitiveInfo("Hi, saw the opening for React Developer and wanted to reach out.")).toBe(false);
+  });
+
+  it("detects CTC mentions", () => {
+    expect(containsSensitiveInfo("My current CTC is 7.5 LPA.")).toBe(true);
+  });
+
+  it("detects LPA mentions on their own", () => {
+    expect(containsSensitiveInfo("Looking for roughly 12 LPA.")).toBe(true);
+  });
+
+  it("detects notice period mentions", () => {
+    expect(containsSensitiveInfo("I have a 30 day notice period.")).toBe(true);
+  });
+
+  it("is case-insensitive", () => {
+    expect(containsSensitiveInfo("my ctc is negotiable")).toBe(true);
   });
 });
