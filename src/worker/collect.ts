@@ -58,18 +58,22 @@ async function saveNewJobs(source: Source, extracted: ExtractedJob[]): Promise<n
     const exists = await db.job.findUnique({ where: { url: job.url } });
     if (exists) continue;
 
-    await db.job.create({
-      data: {
-        url: job.url,
-        title: job.title,
-        company: source.name,
-        location: typeof job.location === "string" ? job.location : null,
-        salaryText: typeof job.salaryText === "string" ? job.salaryText : null,
-        postedAt: parsePostedAt(job.postedAt),
-        source: source.name,
-      },
-    });
-    inserted++;
+    try {
+      await db.job.create({
+        data: {
+          url: job.url,
+          title: job.title,
+          company: source.name,
+          location: typeof job.location === "string" ? job.location : null,
+          salaryText: typeof job.salaryText === "string" ? job.salaryText : null,
+          postedAt: parsePostedAt(job.postedAt),
+          source: source.name,
+        },
+      });
+      inserted++;
+    } catch (err) {
+      console.warn(`[collect] failed to insert job ${job.url}: ${(err as Error).message}`);
+    }
   }
   return inserted;
 }
