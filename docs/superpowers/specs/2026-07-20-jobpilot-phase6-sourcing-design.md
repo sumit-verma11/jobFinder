@@ -15,8 +15,9 @@ The original ask was "search LinkedIn, Naukri, Hirist, Indeed, Shine, and auto-a
 ## Explicit scope
 
 **In scope:**
-- Restructure `Source` config to support three kinds: `careersPage` (today's LLM-scrape, unchanged, used as fallback), `ats` (Greenhouse/Lever/Ashby/Workable, structured JSON, no LLM), `aggregator` (Adzuna, Arbeitnow — global keyword queries, not per-company).
-- A starter list of companies for the `ats`/`careersPage` sources (proposed by the assistant, verified live before shipping — see Testing).
+- Move the per-company source list (`careersPage` / `ats` kinds) out of a static code file and into the database, with a new `/sources` dashboard page to add/edit/remove companies — adding a company never requires a code change or redeploy again. This directly replaces today's `sources.config.ts` array.
+- Two fixed, always-on `aggregator` collectors — Adzuna, Arbeitnow — global keyword queries, not per-company, not user-manageable rows (there's nothing to add/remove; they're either on or off as integrations).
+- A starter list of companies (proposed by the assistant, verified live before shipping — see Testing), seeded into the database once, editable from `/sources` from then on.
 - A new `jobTitleKeywords` field on `UserProfile` / `/settings`, used as the search term(s) for the two aggregators.
 - A per-run cap on how many new jobs `match.ts` scores, so a large first sync (or any burst) doesn't blow through OpenRouter's free-tier rate limit in one run.
 
@@ -29,21 +30,42 @@ The original ask was "search LinkedIn, Naukri, Hirist, Indeed, Shine, and auto-a
 
 ## Data model changes
 
-```typescript
-// src/lib/sources/types.ts — replaces the current single-shape Source
+```prisma
+model Source {                          // NEW — replaces src/lib/sources/sources.config.ts
+  id        String   @id @default(cuid())
+  name      String                      // display name, e.g. "Razorpay"
+  kind      SourceKind
+  url       String?                     // required when kind = CAREERS_PAGE
+  platform  AtsPlatform?                // required when kind = ATS
+  slug      String?                     // required when kind = ATS — the company's slug on that platform
+  createdAt DateTime @default(now())
+}
 
-export type Source =
-  | { kind: "careersPage"; name: string; url: string }
-  | { kind: "ats"; name: string; platform: "greenhouse" | "lever" | "ashby" | "workable"; slug: string }
-  | { kind: "aggregator"; name: "adzuna" | "arbeitnow" };
-  // Note: aggregator entries do NOT carry keywords in this static config — the search
-  // terms come from UserProfile.jobTitleKeywords (below), read at collect-time via
-  // loadProfile(), so they stay editable from /settings without a code change.
+enum SourceKind {
+  CAREERS_PAGE
+  ATS
+}
+
+enum AtsPlatform {
+  GREENHOUSE
+  LEVER
+  ASHBY
+  WORKABLE
+}
+
+model UserProfile {
+  // ...existing fields unchanged...
+  jobTitleKeywords String[] @default([])   // NEW — search terms for Adzuna/Arbeitnow, e.g. ["Full Stack Developer", "MERN Developer"]
+}
+```
+
+```typescript
+// src/lib/sources/types.ts
 
 export interface ExtractedJob {
   title: string;
   company: string;       // NEW — previously implied by source.name; now explicit because
-                          // one `ats`/`aggregator` source can return many different companies
+                          // an aggregator query can return many different companies
   url: string;
   location: string | null;
   salaryText: string | null;
@@ -51,25 +73,24 @@ export interface ExtractedJob {
 }
 ```
 
-```prisma
-model UserProfile {
-  // ...existing fields unchanged...
-  jobTitleKeywords String[] @default([])   // NEW — search terms for Adzuna/Arbeitnow, e.g. ["Full Stack Developer", "MERN Developer"]
-}
-```
+The two `aggregator` collectors (Adzuna, Arbeitnow) are NOT rows in the `Source` table — they're fixed, always-on integrations invoked directly in `collect.ts`, since there's nothing per-entry to manage (no url/slug, just "run this query with the profile's keywords"). Only the per-company `careersPage`/`ats` sources live in the database and are `/sources`-page-manageable.
 
 New environment variables: `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` (free registration at Adzuna's developer portal — the exact current signup flow and rate limits should be confirmed against their live docs during implementation, not assumed from this spec). Arbeitnow's public API needs no key.
 
+## `/sources` page
+
+A new dashboard page, following the same server-component-fetch + client-form-mutation pattern as `/settings`: lists existing `Source` rows, a form to add one (name, kind selector, then `url` for careers-page or `platform`+`slug` for ATS), and a delete action per row. New API routes: `POST /api/sources` (create), `DELETE /api/sources/[id]` (remove) — same validation/error-handling conventions established in Phase 5 (400 on bad input, inline error display on fetch failure, no silent failures).
+
 ## Collector architecture
 
-`collect.ts` currently loops over one flat `sources[]` array, treating every entry as "one company, one URL." That model breaks once a single source can return jobs for many companies (an `ats` query for one company still fits it, but an `aggregator` query fundamentally doesn't map to "one company"). The collector splits into two passes:
+`collect.ts` currently loops over one flat, static `sources[]` array, treating every entry as "one company, one URL." Two changes: the per-company list now comes from the database (`db.source.findMany()`) instead of a static import, and the model has to account for `aggregator` queries not mapping to "one company" at all. The collector runs two passes:
 
-1. **Per-company pass** — `careersPage` and `ats` kind sources, same loop shape as today (one source, one company, politely spaced between requests). For `ats` sources, dispatch to a small per-platform function:
+1. **Per-company pass** — iterates `Source` rows fetched from the database, same loop shape as today (one row, one company, politely spaced between requests). For `ATS`-kind rows, dispatch to a small per-platform function:
    - `collectFromGreenhouse(slug)`, `collectFromLever(slug)`, `collectFromAshby(slug)`, `collectFromWorkable(slug)` — each hits that platform's own public job-board JSON endpoint and maps its response shape into `ExtractedJob[]`. No LLM call, no HTML parsing — this is the reliability win over today's scrape-and-guess approach.
-   - `collectFromCareersPage(source)` — unchanged, used only for companies on none of the four ATS platforms.
-2. **Aggregator pass** — one run per `aggregator` source entry, calling `collectFromAdzuna(keywords)` or `collectFromArbeitnow(keywords)` with `keywords` read from `loadProfile()`'s `jobTitleKeywords` at collect-time (not stored in the static source list — see note above), each returning `ExtractedJob[]` spanning many companies.
+   - `collectFromCareersPage(source)` — unchanged logic, used for `CAREERS_PAGE`-kind rows (companies on none of the four ATS platforms).
+2. **Aggregator pass** — fixed, not database-driven: `collectFromAdzuna(keywords)` and `collectFromArbeitnow(keywords)`, called once each per run with `keywords` read from `loadProfile()`'s `jobTitleKeywords`, each returning `ExtractedJob[]` spanning many companies.
 
-Both passes feed the same `saveNewJobs` dedup-by-URL insert path that exists today. `company` is set from `source.name` for `careersPage`/`ats` entries (same as today's pattern — each of those is still one company per source), and read directly from the API response for `aggregator` entries, since a single aggregator query returns many different companies with no fixed name to fall back on.
+Both passes feed the same `saveNewJobs` dedup-by-URL insert path that exists today. `company` is set from the `Source` row's `name` for `CAREERS_PAGE`/`ATS` rows (same as today's pattern — each row is still one company), and read directly from the API response for aggregator results, since a single aggregator query returns many different companies with no fixed name to fall back on.
 
 Exact response-field mapping for each ATS/aggregator API is an implementation-time detail — this spec commits to the architecture (one small mapping function per platform, structured JSON in, `ExtractedJob[]` out), not to unverified field names.
 
@@ -82,7 +103,7 @@ Two risks that only bite once sourcing expands:
 
 ## Starter company list
 
-Candidates below are a starting point, chosen for being recognizable tech employers plausibly hiring for full-stack/MERN roles in India or remote-friendly for India. **None of these — company-to-platform mapping or slug — are verified as of this spec.** The implementation plan must confirm each one live (hit the real endpoint, confirm real job data comes back) before it's trusted in `sources.config.ts`; any that don't resolve get dropped, not guessed at further.
+Candidates below are a starting point, chosen for being recognizable tech employers plausibly hiring for full-stack/MERN roles in India or remote-friendly for India. **None of these — company-to-platform mapping or slug — are verified as of this spec.** The implementation plan must confirm each one live (hit the real endpoint, confirm real job data comes back) before it's seeded; any that don't resolve get dropped, not guessed at further. Verified ones are seeded as `Source` rows once (migration or seed script); everything after that is added via the `/sources` page, not by editing code.
 
 | Company | Guessed platform |
 |---|---|
@@ -97,12 +118,13 @@ Candidates below are a starting point, chosen for being recognizable tech employ
 | Linear | Ashby |
 | Retool | Ashby or Greenhouse |
 
-The existing 5 hardcoded `careersPage` sources (Jellyfish Technologies, Thrifty AI, GTF Technologies, Beebom, WorldRef) stay as `careersPage`-kind fallback entries unless verification finds any of them on a known ATS.
+The existing 5 hardcoded `careersPage` sources (Jellyfish Technologies, Thrifty AI, GTF Technologies, Beebom, WorldRef) get seeded as `CAREERS_PAGE`-kind rows too, carrying forward what's already there today.
 
 ## Testing
 
 - Unit tests for each collector's response-mapping function, given a representative sample API response as fixture input — assert the correct `ExtractedJob[]` shape comes out. No live network calls inside the test suite.
-- One live, manual verification pass during implementation: hit each proposed company's ATS endpoint for real and confirm it returns actual job data (not a 404, not an empty/wrong-shaped response) before it's trusted in the committed source list — mirrors how Phase 2's collector sources were shaken out.
+- Unit tests for the `/api/sources` create/delete routes (valid input persists, missing url/platform+slug per kind is rejected, delete removes the row) — same shape as the existing `/api/applications` route tests.
+- One live, manual verification pass during implementation: hit each proposed company's ATS endpoint for real and confirm it returns actual job data (not a 404, not an empty/wrong-shaped response) before it's seeded — mirrors how Phase 2's collector sources were shaken out.
 - Existing `tests/match.test.ts` and `tests/applications.test.ts` are unaffected by this phase and must keep passing.
 
 ## Non-negotiables carried over (unchanged, no new work needed)
