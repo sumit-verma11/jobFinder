@@ -2,7 +2,7 @@ import { pathToFileURL } from "node:url";
 import { db } from "../lib/db";
 import { collectFromCareersPage } from "../lib/sources/careersPage";
 import { sources } from "../lib/sources/sources.config";
-import type { ExtractedJob, Source } from "../lib/sources/types";
+import type { ExtractedJob } from "../lib/sources/types";
 
 const DELAY_BETWEEN_SOURCES_MS = 2_000;
 
@@ -26,7 +26,7 @@ export async function runCollect(): Promise<void> {
     try {
       const extracted = await collectFromCareersPage(source);
       jobsFound += extracted.length;
-      const inserted = await saveNewJobs(source, extracted);
+      const inserted = await saveNewJobs(source.name, extracted);
       jobsNew += inserted;
       console.log(`[collect] ${source.name}: found ${extracted.length}, ${inserted} new`);
     } catch (err) {
@@ -53,7 +53,7 @@ export async function runCollect(): Promise<void> {
   console.log(`[collect] run complete: ${status}, found ${jobsFound}, new ${jobsNew}`);
 }
 
-async function saveNewJobs(source: Source, extracted: ExtractedJob[]): Promise<number> {
+async function saveNewJobs(sourceLabel: string, extracted: ExtractedJob[]): Promise<number> {
   let inserted = 0;
   for (const job of extracted) {
     const exists = await db.job.findUnique({ where: { url: job.url } });
@@ -64,11 +64,11 @@ async function saveNewJobs(source: Source, extracted: ExtractedJob[]): Promise<n
         data: {
           url: job.url,
           title: job.title,
-          company: source.name,
+          company: job.company,
           location: typeof job.location === "string" ? job.location : null,
           salaryText: typeof job.salaryText === "string" ? job.salaryText : null,
           postedAt: parsePostedAt(job.postedAt),
-          source: source.name,
+          source: sourceLabel,
         },
       });
       inserted++;
