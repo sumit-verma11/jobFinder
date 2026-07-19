@@ -1,12 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 const UPLOADS_DIR = join(process.cwd(), "uploads");
 
 export async function saveResumeFile(file: File): Promise<{ fileName: string; filePath: string }> {
   await mkdir(UPLOADS_DIR, { recursive: true });
 
-  const fileName = file.name;
+  const fileName = basename(file.name);
   const filePath = join("uploads", fileName);
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(join(process.cwd(), filePath), buffer);
