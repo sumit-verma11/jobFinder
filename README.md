@@ -66,3 +66,34 @@ npm run collect    # fetches all configured sources once, scores nothing yet (Ph
 ### Known limitation
 
 `sources.config.ts` ships with 5 real company URLs, but at the time of writing 3 of them don't currently have a live, structured job-listing page (a couple point at marketing/services pages rather than an actual open-roles list, and one 404s). The collector code itself is correct and tested — it will pick up real postings as soon as `sources.config.ts` is pointed at working URLs. Edit that file directly to swap in better sources; no other code changes are needed.
+
+## Phase 3 — Matcher + Tailor
+
+### Setup
+
+Copy the templates and fill in your real details — these two files are gitignored (they contain your phone, email, and salary) and are never committed:
+
+```bash
+cp src/profile/profile.example.md src/profile/profile.md
+cp src/profile/style-examples.example.md src/profile/style-examples.md
+# edit both with a text editor — real experience, stack, links, CTC, notice period, and a couple of natural example messages
+```
+
+### Run
+
+```bash
+npm run match    # scores every Job with score = null, generates a cover note for scores >= SCORE_THRESHOLD
+npm test          # runs the Vitest suite for the matching/parsing/threshold logic
+```
+
+### Verify
+
+- Console prints one `[match] <title> @ <company>: score X (reason)` line per job, then a final `[match] run complete: scored N/N, M cover note(s) generated` line
+- `docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, score, "scoreReason" FROM "Job" WHERE score IS NOT NULL;'` — every scored job has an integer 1-10 score and a one-line reason
+- `docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, score, ("coverNote" IS NOT NULL) AS has_cover_note FROM "Job" ORDER BY score DESC;'` — only jobs scoring >= `SCORE_THRESHOLD` (default 7) have a cover note
+- Running `npm run match` twice is a no-op the second time (`scoring 0 job(s)`) — it only processes unscored jobs
+- `npm test` — all tests pass, including the safety backstop that discards (and warns about) any generated cover note that accidentally mentions CTC/salary/notice period
+
+### Known limitation
+
+Cover notes are generated from whatever `Job.description` the collector captured — Phase 2's extraction prompt doesn't currently request a description, so it's `null` for every job today. Scoring and cover notes work fine off title/company/location/salary alone, but will get sharper once Phase 2's extraction is extended to pull a short description too (not required for Phase 3 to function).

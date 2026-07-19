@@ -1,6 +1,6 @@
 # JobPilot Phase 3 — Matcher + Tailor Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Score every unscored `Job` against the user's profile (1-10 + one-line reason), generate a short honest cover note for jobs scoring at or above `SCORE_THRESHOLD`, and cover the pure scoring/parsing/threshold logic with Vitest — triggerable manually via `npm run match`.
 
@@ -31,7 +31,7 @@
 **Interfaces:**
 - Produces: `loadProfile(): Profile` where `Profile = { profileText: string; styleExamplesText: string }`. Reads `src/profile/profile.md` and `src/profile/style-examples.md` relative to the project root. Throws a descriptive `Error` (naming the missing file and its `.example.md` template) if either file is missing — this is the only place the "missing profile" failure mode needs to be handled; callers (Task 3's `match.ts`) let it propagate and crash loudly on startup, since matching cannot proceed without it.
 
-- [ ] **Step 1: Write src/lib/profile.ts**
+- [x] **Step 1: Write src/lib/profile.ts**
 
 ```typescript
 import { readFileSync } from "node:fs";
@@ -64,12 +64,12 @@ function readProfileFile(filename: string): string {
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 3: Live smoke test — confirm it loads without printing PII**
+- [x] **Step 3: Live smoke test — confirm it loads without printing PII**
 
 The real `profile.md` and `style-examples.md` already exist locally (gitignored). Confirm loading works WITHOUT printing their contents:
 
@@ -88,7 +88,7 @@ rm /tmp/profile-smoke.mts
 
 Expected: both lengths are non-zero (a few hundred to a few thousand characters), both boolean checks print `true`. **Do not** modify this script to print `profileText` or `styleExamplesText` themselves.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/profile.ts
@@ -120,7 +120,7 @@ git commit -m "feat: add profile loader for profile.md and style-examples.md"
   - `sanitizeCoverNote(raw: string): string`
 - All five are consumed directly by Task 3's `worker/match.ts`.
 
-- [ ] **Step 1: Write src/lib/matching/types.ts**
+- [x] **Step 1: Write src/lib/matching/types.ts**
 
 ```typescript
 export interface JobForMatching {
@@ -132,7 +132,7 @@ export interface JobForMatching {
 }
 ```
 
-- [ ] **Step 2: Write src/lib/matching/prompts.ts**
+- [x] **Step 2: Write src/lib/matching/prompts.ts**
 
 ```typescript
 import type { ChatMessage } from "../llm";
@@ -204,7 +204,7 @@ export function buildCoverNotePrompt(
 }
 ```
 
-- [ ] **Step 3: Write src/lib/matching/parseScore.ts**
+- [x] **Step 3: Write src/lib/matching/parseScore.ts**
 
 ```typescript
 export interface ScoreResult {
@@ -250,7 +250,7 @@ export function parseScoreResponse(raw: string): ScoreResult | null {
 }
 ```
 
-- [ ] **Step 4: Write src/lib/matching/threshold.ts**
+- [x] **Step 4: Write src/lib/matching/threshold.ts**
 
 ```typescript
 export function shouldGenerateCoverNote(score: number, threshold: number): boolean {
@@ -258,7 +258,7 @@ export function shouldGenerateCoverNote(score: number, threshold: number): boole
 }
 ```
 
-- [ ] **Step 5: Write src/lib/matching/sanitizeCoverNote.ts**
+- [x] **Step 5: Write src/lib/matching/sanitizeCoverNote.ts**
 
 ```typescript
 export function sanitizeCoverNote(raw: string): string {
@@ -271,13 +271,13 @@ export function sanitizeCoverNote(raw: string): string {
 }
 ```
 
-- [ ] **Step 6: Install Vitest**
+- [x] **Step 6: Install Vitest**
 
 ```bash
 npm install -D vitest
 ```
 
-- [ ] **Step 7: Write vitest.config.ts**
+- [x] **Step 7: Write vitest.config.ts**
 
 ```typescript
 import { defineConfig } from "vitest/config";
@@ -289,7 +289,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 8: Add test script to package.json**
+- [x] **Step 8: Add test script to package.json**
 
 In `"scripts"`, add:
 
@@ -297,7 +297,7 @@ In `"scripts"`, add:
 "test": "vitest run"
 ```
 
-- [ ] **Step 9: Write tests/match.test.ts (RED first — confirm it fails before Steps 1-5 existed conceptually; since the modules already exist from this task, run once to confirm all pass, not TDD-sequenced)**
+- [x] **Step 9: Write tests/match.test.ts (RED first — confirm it fails before Steps 1-5 existed conceptually; since the modules already exist from this task, run once to confirm all pass, not TDD-sequenced)**
 
 ```typescript
 import { describe, expect, it } from "vitest";
@@ -384,17 +384,17 @@ describe("sanitizeCoverNote", () => {
 });
 ```
 
-- [ ] **Step 10: Run the tests**
+- [x] **Step 10: Run the tests**
 
 Run: `npm test`
 Expected: all tests pass (21 tests across 3 describe blocks), pristine output (no warnings).
 
-- [ ] **Step 11: Typecheck**
+- [x] **Step 11: Typecheck**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add src/lib/matching/ vitest.config.ts tests/match.test.ts package.json package-lock.json
@@ -413,7 +413,7 @@ git commit -m "feat: add matching prompts, defensive score parsing, threshold lo
 - Consumes: `db` from `../lib/db`, `chatCompletion` from `../lib/llm`, `loadProfile` from `../lib/profile`, `buildScorePrompt`/`buildCoverNotePrompt` from `../lib/matching/prompts`, `parseScoreResponse` from `../lib/matching/parseScore`, `shouldGenerateCoverNote` from `../lib/matching/threshold`, `sanitizeCoverNote` from `../lib/matching/sanitizeCoverNote`, `JobForMatching` from `../lib/matching/types` (all from Tasks 1-2).
 - Produces: `runMatch(): Promise<void>` — exported the same way `runCollect()` was in Phase 2, so Phase 4 can wire it into the cron later. Also directly runnable via `npm run match`.
 
-- [ ] **Step 1: Write src/worker/match.ts**
+- [x] **Step 1: Write src/worker/match.ts**
 
 ```typescript
 import { pathToFileURL } from "node:url";
@@ -502,7 +502,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
 
 Note: a job that scores below `SCORE_THRESHOLD` gets `coverNote: null` because `coverNote` is only ever reassigned inside the `if (shouldGenerateCoverNote(...))` block — this is the behavior Task 2's `shouldGenerateCoverNote` tests establish; this step just wires it correctly.
 
-- [ ] **Step 2: Add match script to package.json**
+- [x] **Step 2: Add match script to package.json**
 
 In `"scripts"`, add:
 
@@ -510,12 +510,12 @@ In `"scripts"`, add:
 "match": "tsx --env-file=.env src/worker/match.ts"
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Run the real matcher**
+- [x] **Step 4: Run the real matcher**
 
 ```bash
 npm run match
@@ -523,7 +523,7 @@ npm run match
 
 Expected: `[match] scoring N job(s)` (N will be 3 — the seed jobs from Phase 1, since Phase 2's live collection currently returns 0 real postings), one `[match] <title> @ <company>: score X (reason)` line per job, then `[match] run complete: scored N/N, M cover note(s) generated`. Do not print or paste the full LLM prompts/responses into your report — the console log lines above (title/company/score/reason) are sufficient and don't leak the full profile.
 
-- [ ] **Step 5: Verify scores and reasons landed in Postgres**
+- [x] **Step 5: Verify scores and reasons landed in Postgres**
 
 ```bash
 docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, score, "scoreReason" FROM "Job" WHERE score IS NOT NULL;'
@@ -531,7 +531,7 @@ docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, scor
 
 Expected: all 3 seed jobs have a non-null integer `score` (1-10) and a non-empty `scoreReason`.
 
-- [ ] **Step 6: Verify cover notes only exist for jobs at/above threshold**
+- [x] **Step 6: Verify cover notes only exist for jobs at/above threshold**
 
 ```bash
 docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, score, ("coverNote" IS NOT NULL) AS has_cover_note FROM "Job" ORDER BY score DESC;'
@@ -539,7 +539,7 @@ docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, scor
 
 Expected: every row where `score >= 7` (the default `SCORE_THRESHOLD`) has `has_cover_note = t`; every row where `score < 7` has `has_cover_note = f`. If a job scored >= threshold but has no cover note, check the console output from Step 4 for a `[match] failed to generate cover note` line — that's an acceptable degraded outcome (LLM call failed), not a bug, as long as it was logged.
 
-- [ ] **Step 7: Spot-check cover note quality (read-only, don't paste full profile into your report)**
+- [x] **Step 7: Spot-check cover note quality (read-only, don't paste full profile into your report)**
 
 ```bash
 docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, "coverNote" FROM "Job" WHERE "coverNote" IS NOT NULL;'
@@ -547,7 +547,7 @@ docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, "cov
 
 Read the output yourself and confirm: each cover note is roughly 4 lines or fewer, does not mention CTC/salary/notice period, and does not claim RapidMart processes real transactions or serves real customers (if RapidMart is mentioned at all). Quote at most one short cover note in your report as an example — do not paste the full profile or style-examples content.
 
-- [ ] **Step 8: Verify idempotency**
+- [x] **Step 8: Verify idempotency**
 
 ```bash
 npm run match
@@ -555,7 +555,7 @@ npm run match
 
 Expected: `[match] scoring 0 job(s)` followed by `[match] run complete: scored 0/0, 0 cover note(s) generated` — since all jobs already have a score, there's nothing left to process. This is expected, not a bug.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/worker/match.ts package.json package-lock.json
@@ -566,13 +566,13 @@ git commit -m "feat: add matcher orchestrator with cover note generation and npm
 
 ## Self-Review Checklist (for whoever executes this plan)
 
-- [ ] Collected/seed jobs get sensible scores (1-10) and one-line reasons
-- [ ] Jobs scoring >= `SCORE_THRESHOLD` get a short (~4 line), honest cover note; jobs below do not
-- [ ] `npm test` passes (all Vitest tests green, pristine output)
-- [ ] A malformed/fenced/garbage LLM score response never crashes `npm run match` — it logs a warning and skips that job
-- [ ] Re-running `npm run match` after a full run finds 0 jobs left to score (idempotent by construction)
-- [ ] No cover note mentions CTC, salary, or notice period
-- [ ] No cover note overstates RapidMart as having real transactions/customers
-- [ ] `profile.md`/`style-examples.md` contents never appear in any committed file, report file, or printed console dump beyond short, non-sensitive confirmations
-- [ ] `npx tsc --noEmit` passes with no errors
-- [ ] All 3 tasks committed separately
+- [x] Collected/seed jobs get sensible scores (1-10) and one-line reasons
+- [x] Jobs scoring >= `SCORE_THRESHOLD` get a short (~4 line), honest cover note; jobs below do not
+- [x] `npm test` passes (all Vitest tests green, pristine output)
+- [x] A malformed/fenced/garbage LLM score response never crashes `npm run match` — it logs a warning and skips that job
+- [x] Re-running `npm run match` after a full run finds 0 jobs left to score (idempotent by construction)
+- [x] No cover note mentions CTC, salary, or notice period
+- [x] No cover note overstates RapidMart as having real transactions/customers
+- [x] `profile.md`/`style-examples.md` contents never appear in any committed file, report file, or printed console dump beyond short, non-sensitive confirmations
+- [x] `npx tsc --noEmit` passes with no errors
+- [x] All 3 tasks committed separately
