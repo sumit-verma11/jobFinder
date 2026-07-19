@@ -38,3 +38,8 @@ next-env.d.ts
 
 # local scratch (superpowers plan-execution ledger/briefs)
 .superpowers/
+
+# personal profile data (PII: phone, email, salary) — never push to a public repo
+# (profile.example.md / style-examples.example.md stay tracked as templates)
+src/profile/profile.md
+src/profile/style-examples.md
