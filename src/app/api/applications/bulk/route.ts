@@ -12,6 +12,10 @@ export async function POST(request: Request) {
   try {
     const { ids, action, status } = (await request.json()) as BulkBody;
 
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "ids must be a non-empty array" }, { status: 400 });
+    }
+
     if (action !== "delete" && action !== "archive" && action !== "status") {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
