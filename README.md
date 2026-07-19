@@ -26,7 +26,7 @@ npm run db:seed
 ### Run
 
 ```bash
-npm run dev       # Next.js dashboard at http://localhost:3000 (empty until Phase 5)
+npm run dev       # Next.js dashboard at http://localhost:3000 (placeholder Next.js splash page until Phase 5)
 npm run worker     # separate terminal — ticks every 1 minute, logs "[worker] alive @ ..."
 ```
 
