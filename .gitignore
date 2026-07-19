@@ -43,3 +43,6 @@ next-env.d.ts
 # (profile.example.md / style-examples.example.md stay tracked as templates)
 src/profile/profile.md
 src/profile/style-examples.md
+
+# uploaded resume files (local only, never committed)
+/uploads
