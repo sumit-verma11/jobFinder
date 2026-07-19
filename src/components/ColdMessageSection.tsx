@@ -25,6 +25,9 @@ export function ColdMessageSection({ job }: { job: Job }) {
           setError(data.error ?? "Failed to generate cold message");
         }
       })
+      .catch(() => {
+        if (!cancelled) setError("Failed to generate cold message");
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

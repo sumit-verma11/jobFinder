@@ -12,14 +12,19 @@ export function CoverLetterSection({ job }: { job: Job }) {
   async function handleGenerate() {
     setLoading(true);
     setError(null);
-    const response = await fetch(`/api/jobs/${job.id}/cover-letter`, { method: "POST" });
-    const data = (await response.json()) as { coverNote?: string; error?: string };
-    if (data.coverNote) {
-      setCoverNote(data.coverNote);
-    } else {
-      setError(data.error ?? "Failed to generate cover letter");
+    try {
+      const response = await fetch(`/api/jobs/${job.id}/cover-letter`, { method: "POST" });
+      const data = (await response.json()) as { coverNote?: string; error?: string };
+      if (data.coverNote) {
+        setCoverNote(data.coverNote);
+      } else {
+        setError(data.error ?? "Failed to generate cover letter");
+      }
+    } catch {
+      setError("Failed to generate cover letter");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
