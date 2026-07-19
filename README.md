@@ -126,3 +126,31 @@ npm run notify     # runs the notifier once, standalone
 - `/saved`, `/applied <jobId>`, `/skip <jobId>` all reply and update the `Application` table correctly (`APPLIED` sets `appliedAt`, `REJECTED` does not)
 - Messages from any Telegram user ID other than `TELEGRAM_ALLOWED_USER_ID` get no reply at all — the bot doesn't confirm its own existence to strangers
 - No notification or cover note ever contains CTC, salary figure beyond the posting's own `salaryText`, or notice period
+
+## Phase 5 — Dashboard + Applications Management
+
+### Setup
+
+No new environment variables. Uploaded resumes are stored locally under `uploads/` (gitignored).
+
+### Run
+
+```bash
+npm run dev    # dashboard at http://localhost:3000
+```
+
+### Pages
+
+- `/` — Saved queue: jobs you've saved but haven't applied to yet, plus dashboard stats (Total Applications, Applied Today/This Week, Interviews, Offers, Rejections). "Mark as Applied" moves a job to `/applications`.
+- `/jobs` — every collected job, filterable by score/source, with a "Save to pipeline" action.
+- `/jobs/[id]` — full job details: description, on-demand cover letter and cold message generation (both cached after first generation), notes, follow-up date, and status.
+- `/settings` — your profile, style examples, preferred locations, work mode, expected salary, notice period, and resume upload. This is what the matcher (`npm run match`) actually reads now — it replaced the old `src/profile/*.md` files.
+- `/applications` — every submitted application, with bulk delete/archive/status-change, CSV export, filters (company/source/status/date/score), search, and sort.
+
+### Verify
+
+- Filling in `/settings` and then running `npm run match` produces scores/cover notes that respect your preferred locations and work mode (check the `[match]` console output)
+- Saving a job on `/jobs`, marking it Applied on `/`, and finding it on `/applications` all work in one flow
+- Opening a job's Details page generates a cold message automatically within a few seconds, and a cover letter on click if one wasn't already generated at match time
+- `/applications` bulk delete shows a confirmation dialog before removing anything, and CSV export downloads a file with the expected columns
+- `npx tsc --noEmit` passes with no errors, `npm test` passes
