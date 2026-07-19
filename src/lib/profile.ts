@@ -15,6 +15,7 @@ export interface ProfileInput {
   workMode: WorkMode;
   expectedSalary: string | null;
   noticePeriod: string | null;
+  jobTitleKeywords: string[];
   resumeFileName?: string;
   resumeFilePath?: string;
 }
@@ -52,6 +53,7 @@ export async function saveProfile(input: ProfileInput): Promise<void> {
       workMode: input.workMode,
       expectedSalary: input.expectedSalary,
       noticePeriod: input.noticePeriod,
+      jobTitleKeywords: input.jobTitleKeywords,
       ...resumeFields,
     },
     update: {
@@ -61,7 +63,13 @@ export async function saveProfile(input: ProfileInput): Promise<void> {
       workMode: input.workMode,
       expectedSalary: input.expectedSalary,
       noticePeriod: input.noticePeriod,
+      jobTitleKeywords: input.jobTitleKeywords,
       ...resumeFields,
     },
   });
+}
+
+export async function loadJobTitleKeywords(): Promise<string[]> {
+  const row = await db.userProfile.findUnique({ where: { id: "default" } });
+  return row?.jobTitleKeywords ?? [];
 }

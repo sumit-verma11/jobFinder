@@ -60,6 +60,17 @@ export function SettingsForm({ profile }: { profile: UserProfile | null }) {
       </label>
 
       <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Job title keywords</span>
+        <input
+          type="text"
+          name="jobTitleKeywords"
+          defaultValue={profile?.jobTitleKeywords.join(", ") ?? ""}
+          className="rounded-md border border-slate-200 p-2 text-sm"
+          placeholder="Full Stack Developer, MERN Developer, React Developer"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Work mode</span>
         <select
           name="workMode"

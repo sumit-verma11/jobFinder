@@ -13,6 +13,10 @@ export async function POST(request: Request) {
       .split(",")
       .map((location) => location.trim())
       .filter(Boolean);
+    const jobTitleKeywords = String(form.get("jobTitleKeywords") ?? "")
+      .split(",")
+      .map((keyword) => keyword.trim())
+      .filter(Boolean);
     const workMode = String(form.get("workMode") ?? "REMOTE") as WorkMode;
     const expectedSalary = String(form.get("expectedSalary") ?? "").trim() || null;
     const noticePeriod = String(form.get("noticePeriod") ?? "").trim() || null;
@@ -25,6 +29,7 @@ export async function POST(request: Request) {
       profileText,
       styleExamplesText,
       preferredLocations,
+      jobTitleKeywords,
       workMode,
       expectedSalary,
       noticePeriod,
