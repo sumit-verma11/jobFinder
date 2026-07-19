@@ -21,6 +21,7 @@ model Job {
   score         Int?
   scoreReason   String?
   coverNote     String?
+  coldMessage   String?
   notifiedAt    DateTime?
   application   Application?
 }
@@ -33,15 +34,39 @@ model Application {
   appliedAt   DateTime?
   notes       String?
   followUpAt  DateTime?
+  archived    Boolean   @default(false)
   updatedAt   DateTime  @updatedAt
 }
 
 enum AppStatus {
   SAVED
   APPLIED
-  INTERVIEW
+  RECRUITER_VIEWED
+  OA_RECEIVED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
   OFFER
   REJECTED
+  WITHDRAWN
+}
+
+model UserProfile {
+  id                 String    @id @default("default")
+  profileText        String
+  styleExamplesText  String?
+  preferredLocations String[]
+  workMode           WorkMode  @default(REMOTE)
+  expectedSalary     String?
+  noticePeriod       String?
+  resumeFileName     String?
+  resumeFilePath     String?
+  updatedAt          DateTime  @updatedAt
+}
+
+enum WorkMode {
+  REMOTE
+  HYBRID
+  ONSITE
 }
 
 model RunLog {
