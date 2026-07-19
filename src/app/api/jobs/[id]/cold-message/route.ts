@@ -17,16 +17,16 @@ export async function POST(_request: Request, { params }: { params: { id: string
     return NextResponse.json({ coldMessage: job.coldMessage });
   }
 
-  const { profileText, styleExamplesText } = await loadProfile();
-  const jobForMatching: JobForMatching = {
-    title: job.title,
-    company: job.company,
-    location: job.location,
-    salaryText: job.salaryText,
-    description: job.description,
-  };
-
   try {
+    const { profileText, styleExamplesText } = await loadProfile();
+    const jobForMatching: JobForMatching = {
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      salaryText: job.salaryText,
+      description: job.description,
+    };
+
     const raw = await chatCompletion(buildColdMessagePrompt(profileText, styleExamplesText, jobForMatching));
     const sanitized = sanitizeCoverNote(raw);
 
