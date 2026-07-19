@@ -87,5 +87,11 @@ function parseExtractedJobs(raw: string): ExtractedJob[] {
 function isValidExtractedJob(value: unknown): value is ExtractedJob {
   if (typeof value !== "object" || value === null) return false;
   const job = value as Record<string, unknown>;
-  return typeof job.title === "string" && typeof job.url === "string";
+  return (
+    typeof job.title === "string" &&
+    typeof job.url === "string" &&
+    (job.location === null || typeof job.location === "string") &&
+    (job.salaryText === null || typeof job.salaryText === "string") &&
+    (job.postedAt === null || typeof job.postedAt === "string")
+  );
 }

@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { db } from "../lib/db";
 import { collectFromCareersPage } from "../lib/sources/careersPage";
 import { sources } from "../lib/sources/sources.config";
@@ -88,7 +89,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   runCollect()
     .catch((err) => {
       console.error("[collect] fatal error:", err);
