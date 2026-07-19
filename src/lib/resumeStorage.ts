@@ -3,15 +3,17 @@ import { basename, join } from "node:path";
 
 const UPLOADS_DIR = join(process.cwd(), "uploads");
 
-export async function saveResumeFile(file: File): Promise<{ fileName: string; filePath: string }> {
+export async function saveResumeFile(
+  file: File
+): Promise<{ resumeFileName: string; resumeFilePath: string }> {
   await mkdir(UPLOADS_DIR, { recursive: true });
 
-  const fileName = basename(file.name);
-  const filePath = join("uploads", fileName);
+  const resumeFileName = basename(file.name);
+  const resumeFilePath = join("uploads", resumeFileName);
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(join(process.cwd(), filePath), buffer);
+  await writeFile(join(process.cwd(), resumeFilePath), buffer);
 
-  return { fileName, filePath };
+  return { resumeFileName, resumeFilePath };
 }
 
 export function resolveResumePath(filePath: string): string {
