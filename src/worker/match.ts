@@ -11,7 +11,7 @@ import type { JobForMatching } from "../lib/matching/types";
 const SCORE_THRESHOLD = Number(process.env.SCORE_THRESHOLD) || 7;
 
 export async function runMatch(): Promise<void> {
-  const { profileText, styleExamplesText } = loadProfile();
+  const { profileText, styleExamplesText, preferredLocations, workMode } = await loadProfile();
   const jobs = await db.job.findMany({ where: { score: null } });
 
   console.log(`[match] scoring ${jobs.length} job(s)`);
@@ -29,7 +29,9 @@ export async function runMatch(): Promise<void> {
     };
 
     try {
-      const scoreRaw = await chatCompletion(buildScorePrompt(profileText, jobForMatching));
+      const scoreRaw = await chatCompletion(
+        buildScorePrompt(profileText, preferredLocations, workMode, jobForMatching)
+      );
       const scoreResult = parseScoreResponse(scoreRaw);
 
       if (!scoreResult) {
