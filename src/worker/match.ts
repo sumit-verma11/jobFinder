@@ -5,7 +5,7 @@ import { loadProfile } from "../lib/profile";
 import { buildScorePrompt, buildCoverNotePrompt } from "../lib/matching/prompts";
 import { parseScoreResponse } from "../lib/matching/parseScore";
 import { shouldGenerateCoverNote } from "../lib/matching/threshold";
-import { sanitizeCoverNote } from "../lib/matching/sanitizeCoverNote";
+import { sanitizeCoverNote, containsSensitiveInfo } from "../lib/matching/sanitizeCoverNote";
 import type { JobForMatching } from "../lib/matching/types";
 
 const SCORE_THRESHOLD = Number(process.env.SCORE_THRESHOLD) || 7;
@@ -43,8 +43,13 @@ export async function runMatch(): Promise<void> {
           const coverNoteRaw = await chatCompletion(
             buildCoverNotePrompt(profileText, styleExamplesText, jobForMatching)
           );
-          coverNote = sanitizeCoverNote(coverNoteRaw);
-          coverNotesGenerated++;
+          const sanitized = sanitizeCoverNote(coverNoteRaw);
+          if (containsSensitiveInfo(sanitized)) {
+            console.warn(`[match] discarding cover note for job ${job.id}: mentioned CTC/salary/notice period`);
+          } else {
+            coverNote = sanitized;
+            coverNotesGenerated++;
+          }
         } catch (err) {
           console.error(`[match] failed to generate cover note for job ${job.id}: ${(err as Error).message}`);
         }
