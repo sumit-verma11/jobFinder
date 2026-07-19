@@ -34,6 +34,7 @@ export function ApplicationsTable({ applications }: { applications: ApplicationW
   const [sort, setSort] = useState<ApplicationSort>("newest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const sources = useMemo(() => Array.from(new Set(applications.map((app) => app.job.source))), [applications]);
 
@@ -41,6 +42,8 @@ export function ApplicationsTable({ applications }: { applications: ApplicationW
     () => sortApplications(filterApplications(applications, filters, includeArchived), sort),
     [applications, filters, includeArchived, sort]
   );
+
+  const allVisibleSelected = visible.length > 0 && visible.every((app) => selected.has(app.id));
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -52,17 +55,33 @@ export function ApplicationsTable({ applications }: { applications: ApplicationW
   }
 
   function toggleSelectAll() {
-    setSelected((prev) => (prev.size === visible.length ? new Set() : new Set(visible.map((app) => app.id))));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visible.forEach((app) => next.delete(app.id));
+      } else {
+        visible.forEach((app) => next.add(app.id));
+      }
+      return next;
+    });
   }
 
   async function runBulkAction(action: "delete" | "archive" | "status", status?: string) {
-    await fetch("/api/applications/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: Array.from(selected), action, status }),
-    });
-    setSelected(new Set());
-    router.refresh();
+    try {
+      const response = await fetch("/api/applications/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selected), action, status }),
+      });
+      if (!response.ok) {
+        throw new Error("Bulk action failed");
+      }
+      setBulkError(null);
+      setSelected(new Set());
+      router.refresh();
+    } catch {
+      setBulkError("Bulk action failed — please try again");
+    }
   }
 
   function handleExport() {
@@ -184,6 +203,7 @@ export function ApplicationsTable({ applications }: { applications: ApplicationW
           >
             Export Selected (CSV)
           </button>
+          {bulkError && <span className="text-xs text-red-600">{bulkError}</span>}
         </div>
       )}
 
@@ -196,7 +216,7 @@ export function ApplicationsTable({ applications }: { applications: ApplicationW
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
             <th className="py-2">
-              <input type="checkbox" checked={selected.size === visible.length && visible.length > 0} onChange={toggleSelectAll} />
+              <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} />
             </th>
             <th className="py-2">Job Title</th>
             <th className="py-2">Company</th>
