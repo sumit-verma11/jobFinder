@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "grammy": "^1.45.1",
     "next": "14.2.35",
     "node-cron": "^4.6.0",
     "react": "^18",
