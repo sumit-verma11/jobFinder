@@ -1,6 +1,6 @@
 # JobPilot Phase 4 — Telegram Notify + Commands Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Send one Telegram notification per job scoring at/above `SCORE_THRESHOLD` (never re-notifying), always send a status message even when there's nothing to report (silence must never mean success), support `/saved`, `/applied <jobId>`, `/skip <jobId>` bot commands restricted to the owner's Telegram account, and wire `collect → match → notify` into the real cron schedule.
 
@@ -31,13 +31,13 @@
 - Consumes: `db` from `./db`, `AppStatus` from `@prisma/client`, `process.env.TELEGRAM_BOT_TOKEN`, `process.env.TELEGRAM_ALLOWED_USER_ID`.
 - Produces: `bot` (a configured grammY `Bot` instance, with the allowlist middleware and all three commands already registered — Task 3 just calls `bot.start()` on it) and `notifyUser(message: string): Promise<void>` — consumed by Task 2's `worker/notify.ts`.
 
-- [ ] **Step 1: Install grammY**
+- [x] **Step 1: Install grammY**
 
 ```bash
 npm install grammy
 ```
 
-- [ ] **Step 2: Write src/lib/telegram.ts**
+- [x] **Step 2: Write src/lib/telegram.ts**
 
 ```typescript
 import { Bot } from "grammy";
@@ -133,12 +133,12 @@ export async function notifyUser(message: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Live smoke test — confirm the bot can send a message**
+- [x] **Step 4: Live smoke test — confirm the bot can send a message**
 
 Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ALLOWED_USER_ID` already set in `.env`. If either is missing, STOP and report NEEDS_CONTEXT — do not fake or skip this.
 
@@ -154,7 +154,7 @@ rm /tmp/telegram-smoke.mts
 
 Expected: prints `sent`, and a real Telegram message arrives on the owner's phone/app. Report whether you have external confirmation the message arrived (you generally won't — that's fine, note in your report that this needs the human's confirmation) but do confirm the script itself ran without throwing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/telegram.ts package.json package-lock.json
@@ -173,7 +173,7 @@ git commit -m "feat: add Telegram bot with /saved, /applied, /skip commands and 
 - Consumes: `db` from `../lib/db`, `notifyUser` from `../lib/telegram` (Task 1).
 - Produces: `runNotify(): Promise<void>` — exported the same way `runCollect()`/`runMatch()` are, for Task 3's cron wiring. Also directly runnable via `npm run notify`.
 
-- [ ] **Step 1: Write src/worker/notify.ts**
+- [x] **Step 1: Write src/worker/notify.ts**
 
 ```typescript
 import { pathToFileURL } from "node:url";
@@ -268,7 +268,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
 }
 ```
 
-- [ ] **Step 2: Add notify script to package.json**
+- [x] **Step 2: Add notify script to package.json**
 
 In `"scripts"`, add:
 
@@ -276,12 +276,12 @@ In `"scripts"`, add:
 "notify": "tsx --env-file=.env src/worker/notify.ts"
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Run the real notifier**
+- [x] **Step 4: Run the real notifier**
 
 At this point in the project, all 3 seed jobs already have scores (9, 7, 6) from Phase 3's live run, and the two scoring >=7 already have cover notes — but none have `notifiedAt` set yet, so this is the first real notify run.
 
@@ -291,7 +291,7 @@ npm run notify
 
 Expected: `[notify] 2 job(s) to notify`, two real Telegram messages arrive (one per job scoring >=7), `[notify] run complete: notified 2/2`. Since the latest `RunLog` status should be `PARTIAL` (from Phase 2's live collect run against sources with data issues), a third message about that PARTIAL run should also arrive.
 
-- [ ] **Step 5: Verify notifiedAt was set**
+- [x] **Step 5: Verify notifiedAt was set**
 
 ```bash
 docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, score, ("notifiedAt" IS NOT NULL) AS notified FROM "Job" ORDER BY score DESC;'
@@ -299,7 +299,7 @@ docker compose exec postgres psql -U jobpilot -d jobpilot -c 'SELECT title, scor
 
 Expected: the two jobs scoring >=7 have `notified = t`; the one scoring 6 has `notified = f` (it was never a notify candidate).
 
-- [ ] **Step 6: Verify idempotency — re-running sends no duplicate job notifications**
+- [x] **Step 6: Verify idempotency — re-running sends no duplicate job notifications**
 
 ```bash
 npm run notify
@@ -307,7 +307,7 @@ npm run notify
 
 Expected: `[notify] 0 job(s) to notify`. Since `notified` will be 0, a "No new matches today (scanned N jobs)" message IS expected and correct here — that's the "silence must always mean something is broken" rule working as designed, not a bug. Confirm this message actually arrives.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/worker/notify.ts package.json package-lock.json
@@ -326,7 +326,7 @@ git commit -m "feat: add notify orchestrator with run-summary alerts and npm run
 - Consumes: `runCollect` from `./collect` (Phase 2), `runMatch` from `./match` (Phase 3), `runNotify` from `./notify` (Task 2), `bot` from `../lib/telegram` (Task 1).
 - Produces: the real `npm run worker` entry point — starts Telegram bot polling (so commands work) and schedules `collect → match → notify` on `CRON_SCHEDULE`.
 
-- [ ] **Step 1: Replace src/worker/index.ts**
+- [x] **Step 1: Replace src/worker/index.ts**
 
 ```typescript
 import cron from "node-cron";
@@ -359,7 +359,7 @@ console.log("[worker] telegram bot listening for commands");
 console.log("[worker] scheduled, waiting for cron ticks... (Ctrl+C to stop)");
 ```
 
-- [ ] **Step 2: Update the worker script in package.json**
+- [x] **Step 2: Update the worker script in package.json**
 
 Change the existing `"worker"` script to include `--env-file=.env` (it didn't need it in Phase 1, but now reads `CRON_SCHEDULE` directly and calls functions that need `OPENROUTER_API_KEY`, `TELEGRAM_BOT_TOKEN`, etc.):
 
@@ -367,12 +367,12 @@ Change the existing `"worker"` script to include `--env-file=.env` (it didn't ne
 "worker": "tsx --env-file=.env src/worker/index.ts"
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Start the worker and confirm the bot responds to a live command**
+- [x] **Step 4: Start the worker and confirm the bot responds to a live command**
 
 ```bash
 npm run worker
@@ -380,7 +380,7 @@ npm run worker
 
 Expected startup output: `[worker] starting, schedule: ...`, `[worker] telegram bot listening for commands`, `[worker] scheduled, waiting for cron ticks...`. While it's running, from the owner's Telegram account, send `/saved`. Confirm a reply arrives (either a list of saved jobs, or "No saved jobs — nothing pending action."). This proves the bot's long-polling loop is actually live, not just that `bot.start()` was called without erroring.
 
-- [ ] **Step 5: Confirm the pipeline composition is correct without waiting for the real schedule**
+- [x] **Step 5: Confirm the pipeline composition is correct without waiting for the real schedule**
 
 Waiting for `CRON_SCHEDULE` (default once daily) isn't practical to verify live. Instead, confirm by running the three pipeline functions manually in the same order the cron callback uses:
 
@@ -390,11 +390,11 @@ npm run collect && npm run match && npm run notify
 
 Expected: all three complete without error (collect may find 0 new sources per Phase 2's known limitation — that's fine, not this task's concern), confirming the composition order works end to end. Cross-check this matches `worker/index.ts`'s cron callback by reading the file — both should call `runCollect()` → `runMatch()` → `runNotify()` in that order.
 
-- [ ] **Step 6: Stop the worker**
+- [x] **Step 6: Stop the worker**
 
 Ctrl+C the running `npm run worker` process from Step 4 once you've confirmed the command reply.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/worker/index.ts package.json
@@ -405,12 +405,12 @@ git commit -m "feat: wire collect -> match -> notify into the real cron schedule
 
 ## Self-Review Checklist (for whoever executes this plan)
 
-- [ ] Every job scoring >= `SCORE_THRESHOLD` gets exactly one Telegram notification, never re-sent
-- [ ] A run with zero new matches still sends "No new matches today (scanned N jobs)."
-- [ ] A PARTIAL/FAILED `RunLog` status still produces a Telegram alert, independent of whether there were job matches
-- [ ] `/saved`, `/applied <jobId>`, `/skip <jobId>` all work and update the DB correctly (verified live by the human)
-- [ ] Messages from a Telegram user ID other than `TELEGRAM_ALLOWED_USER_ID` produce no bot response at all (verified by code review of the middleware; ideally also live-verified by the human with a second account if they have one)
-- [ ] No cover note or notification message contains CTC/salary/notice period
-- [ ] `npm run worker` starts, the bot responds to a live command, and stopping/restarting it doesn't re-notify already-notified jobs
-- [ ] `npx tsc --noEmit` passes with no errors
-- [ ] All 3 tasks committed separately
+- [x] Every job scoring >= `SCORE_THRESHOLD` gets exactly one Telegram notification, never re-sent
+- [x] A run with zero new matches still sends "No new matches today (scanned N jobs)."
+- [x] A PARTIAL/FAILED `RunLog` status still produces a Telegram alert, independent of whether there were job matches
+- [x] `/saved`, `/applied <jobId>`, `/skip <jobId>` all work and update the DB correctly (verified live by the human)
+- [x] Messages from a Telegram user ID other than `TELEGRAM_ALLOWED_USER_ID` produce no bot response at all (verified by code review of the middleware; ideally also live-verified by the human with a second account if they have one)
+- [x] No cover note or notification message contains CTC/salary/notice period
+- [x] `npm run worker` starts, the bot responds to a live command, and stopping/restarting it doesn't re-notify already-notified jobs
+- [x] `npx tsc --noEmit` passes with no errors
+- [x] All 3 tasks committed separately

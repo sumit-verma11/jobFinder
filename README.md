@@ -97,3 +97,32 @@ npm test          # runs the Vitest suite for the matching/parsing/threshold log
 ### Known limitation
 
 Cover notes are generated from whatever `Job.description` the collector captured — Phase 2's extraction prompt doesn't currently request a description, so it's `null` for every job today. Scoring and cover notes work fine off title/company/location/salary alone, but will get sharper once Phase 2's extraction is extended to pull a short description too (not required for Phase 3 to function).
+
+## Phase 4 — Telegram Notify + Commands
+
+### Setup
+
+Create a bot with [@BotFather](https://t.me/BotFather), then get your own numeric Telegram user ID from [@userinfobot](https://t.me/userinfobot). Add both to `.env`:
+
+```
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_ALLOWED_USER_ID=...
+CRON_SCHEDULE=0 9 * * *
+```
+
+### Run
+
+```bash
+npm run worker    # starts Telegram bot polling + schedules collect -> match -> notify on CRON_SCHEDULE
+npm run notify     # runs the notifier once, standalone
+```
+
+### Verify
+
+- `npm run worker` prints `[worker] telegram bot listening for commands`, then a live `/saved` command from the owner's Telegram account gets a reply — proves long-polling is actually running
+- Every `Job` scoring >= `SCORE_THRESHOLD` gets exactly one Telegram message, and re-running `npm run notify` never re-sends it (`notifiedAt` is set only after a confirmed send)
+- A run with 0 new matches still sends "No new matches today (scanned N jobs)." — silence never means success
+- A non-`SUCCESS` `RunLog` status sends its own alert, independent of whether there were job matches
+- `/saved`, `/applied <jobId>`, `/skip <jobId>` all reply and update the `Application` table correctly (`APPLIED` sets `appliedAt`, `REJECTED` does not)
+- Messages from any Telegram user ID other than `TELEGRAM_ALLOWED_USER_ID` get no reply at all — the bot doesn't confirm its own existence to strangers
+- No notification or cover note ever contains CTC, salary figure beyond the posting's own `salaryText`, or notice period
