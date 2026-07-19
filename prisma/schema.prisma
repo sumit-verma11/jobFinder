@@ -60,6 +60,7 @@ model UserProfile {
   noticePeriod       String?
   resumeFileName     String?
   resumeFilePath     String?
+  jobTitleKeywords   String[]  @default([])
   updatedAt          DateTime  @updatedAt
 }
 
@@ -77,4 +78,26 @@ model RunLog {
   jobsFound  Int       @default(0)
   jobsNew    Int       @default(0)
   error      String?
+}
+
+model Source {
+  id        String       @id @default(cuid())
+  name      String
+  kind      SourceKind
+  url       String?
+  platform  AtsPlatform?
+  slug      String?
+  createdAt DateTime     @default(now())
+}
+
+enum SourceKind {
+  CAREERS_PAGE
+  ATS
+}
+
+enum AtsPlatform {
+  GREENHOUSE
+  LEVER
+  ASHBY
+  WORKABLE
 }
