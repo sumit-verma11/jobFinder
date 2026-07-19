@@ -1,6 +1,6 @@
 # JobPilot Phase 1 — Skeleton + DB Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Stand up the JobPilot repo skeleton — Next.js 14 (App Router, TS strict, Tailwind), Postgres via Docker Compose, Prisma schema/migrations, a worker process that ticks on a cron and logs "worker alive", and a seed script that inserts 3 fake jobs — so later phases have a running app and DB to build on.
 
@@ -57,7 +57,7 @@ When prompted, accept defaults (project name inferred from directory).
 **Interfaces:**
 - Produces: a running local Postgres container reachable at `postgresql://jobpilot:jobpilot@localhost:5432/jobpilot`, and Prisma Client generated from a schema exposing `Job`, `Application`, `AppStatus`, `RunLog` — these are the exact model/enum names `src/lib/db.ts` (Task 3) and the seed script import via `@prisma/client`.
 
-- [ ] **Step 1: Write docker-compose.yml**
+- [x] **Step 1: Write docker-compose.yml**
 
 ```yaml
 services:
@@ -77,7 +77,7 @@ volumes:
   jobpilot_pgdata:
 ```
 
-- [ ] **Step 2: Write .env.example**
+- [x] **Step 2: Write .env.example**
 
 ```
 DATABASE_URL=postgresql://jobpilot:jobpilot@localhost:5432/jobpilot
@@ -89,7 +89,7 @@ CRON_SCHEDULE=0 9 * * *          # 9:00 AM daily
 SCORE_THRESHOLD=7
 ```
 
-- [ ] **Step 3: Copy to a real local .env**
+- [x] **Step 3: Copy to a real local .env**
 
 ```bash
 cp .env.example .env
@@ -97,18 +97,18 @@ cp .env.example .env
 
 `DATABASE_URL` in `.env` already matches the Compose credentials — no edit needed for local dev. Leave the other keys blank for now (not used until later phases).
 
-- [ ] **Step 4: Confirm .env is gitignored**
+- [x] **Step 4: Confirm .env is gitignored**
 
 Check `.gitignore` contains `.env`. Next.js's default template ignores `.env*.local` but not plain `.env` — add a line `.env` if missing.
 
-- [ ] **Step 5: Install Prisma**
+- [x] **Step 5: Install Prisma**
 
 ```bash
 npm install -D prisma
 npm install @prisma/client
 ```
 
-- [ ] **Step 6: Write prisma/schema.prisma**
+- [x] **Step 6: Write prisma/schema.prisma**
 
 ```prisma
 generator client {
@@ -168,7 +168,7 @@ model RunLog {
 }
 ```
 
-- [ ] **Step 7: Add db scripts to package.json**
+- [x] **Step 7: Add db scripts to package.json**
 
 In `package.json` `"scripts"`, add:
 
@@ -177,7 +177,7 @@ In `package.json` `"scripts"`, add:
 "db:generate": "prisma generate"
 ```
 
-- [ ] **Step 8: Start Postgres**
+- [x] **Step 8: Start Postgres**
 
 ```bash
 docker compose up -d
@@ -185,7 +185,7 @@ docker compose up -d
 
 Expected: `docker compose ps` shows the `postgres` service as `running (healthy)` or `Up`.
 
-- [ ] **Step 9: Run the first migration**
+- [x] **Step 9: Run the first migration**
 
 ```bash
 npm run db:migrate -- --name init
@@ -193,7 +193,7 @@ npm run db:migrate -- --name init
 
 Expected: prompts complete without error, creates `prisma/migrations/<timestamp>_init/migration.sql`, prints "Your database is now in sync with your schema."
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add docker-compose.yml .env.example .gitignore prisma package.json package-lock.json
@@ -215,7 +215,7 @@ Note: `.env` itself must NOT be committed (it's gitignored) — verify with `git
 - Consumes: `PrismaClient`, `AppStatus` from `@prisma/client` (generated in Task 2).
 - Produces: `db` — a singleton `PrismaClient` instance exported from `src/lib/db.ts`, imported as `import { db } from "@/lib/db"` by every later phase (worker, API routes). Seed script produces 3 `Job` rows with distinct `url` values for the dashboard to render in Phase 5.
 
-- [ ] **Step 1: Write src/lib/db.ts**
+- [x] **Step 1: Write src/lib/db.ts**
 
 Next.js dev mode hot-reloads modules, which would otherwise spawn a new `PrismaClient` (and new connection pool) on every reload. Cache it on `globalThis` in development.
 
@@ -233,13 +233,13 @@ if (process.env.NODE_ENV !== "production") {
 }
 ```
 
-- [ ] **Step 2: Install tsx (to run TS scripts directly, no build step)**
+- [x] **Step 2: Install tsx (to run TS scripts directly, no build step)**
 
 ```bash
 npm install -D tsx
 ```
 
-- [ ] **Step 3: Write prisma/seed.ts**
+- [x] **Step 3: Write prisma/seed.ts**
 
 ```typescript
 import { db } from "../src/lib/db";
@@ -298,7 +298,7 @@ main()
 
 `upsert` on `url` makes the seed idempotent — running it twice must not create duplicates or crash on the unique constraint.
 
-- [ ] **Step 4: Add seed script and Prisma seed config to package.json**
+- [x] **Step 4: Add seed script and Prisma seed config to package.json**
 
 In `"scripts"`, add:
 
@@ -314,7 +314,7 @@ Add a top-level `"prisma"` key (sibling to `"scripts"`) so `prisma migrate dev` 
 }
 ```
 
-- [ ] **Step 5: Run the seed script**
+- [x] **Step 5: Run the seed script**
 
 ```bash
 npm run db:seed
@@ -322,7 +322,7 @@ npm run db:seed
 
 Expected output: `Seeded 3 jobs.`
 
-- [ ] **Step 6: Verify rows landed in Postgres**
+- [x] **Step 6: Verify rows landed in Postgres**
 
 ```bash
 docker compose exec postgres psql -U jobpilot -d jobpilot -c "SELECT title, company, url FROM \"Job\";"
@@ -330,7 +330,7 @@ docker compose exec postgres psql -U jobpilot -d jobpilot -c "SELECT title, comp
 
 Expected: 3 rows returned.
 
-- [ ] **Step 7: Verify idempotency**
+- [x] **Step 7: Verify idempotency**
 
 ```bash
 npm run db:seed
@@ -339,7 +339,7 @@ docker compose exec postgres psql -U jobpilot -d jobpilot -c "SELECT count(*) FR
 
 Expected: count is still `3`, not `6`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/lib/db.ts prisma/seed.ts package.json package-lock.json
@@ -358,14 +358,14 @@ git commit -m "feat: add Prisma client singleton and job seed script"
 - Consumes: nothing from earlier tasks yet (Phase 2 wires `collect.ts` in here).
 - Produces: a `npm run worker` long-running process. Later phases (`collect.ts`, `match.ts`, `notify.ts`) get imported and called from the cron callback defined here — this file stays the single cron owner per the spec's architecture.
 
-- [ ] **Step 1: Install node-cron**
+- [x] **Step 1: Install node-cron**
 
 ```bash
 npm install node-cron
 npm install -D @types/node-cron
 ```
 
-- [ ] **Step 2: Write src/worker/index.ts**
+- [x] **Step 2: Write src/worker/index.ts**
 
 Uses a hardcoded 1-minute schedule for this phase only, per the spec ("set a 1-min cron temporarily for testing"). Phase 4 switches this to read `CRON_SCHEDULE` from env once there's a real pipeline to run daily.
 
@@ -383,7 +383,7 @@ cron.schedule(TEMP_TEST_SCHEDULE, () => {
 console.log("[worker] scheduled, waiting for ticks... (Ctrl+C to stop)");
 ```
 
-- [ ] **Step 3: Add worker script to package.json**
+- [x] **Step 3: Add worker script to package.json**
 
 In `"scripts"`, add:
 
@@ -391,7 +391,7 @@ In `"scripts"`, add:
 "worker": "tsx src/worker/index.ts"
 ```
 
-- [ ] **Step 4: Run the worker and observe two ticks**
+- [x] **Step 4: Run the worker and observe two ticks**
 
 ```bash
 npm run worker
@@ -399,7 +399,7 @@ npm run worker
 
 Expected: immediately prints `[worker] starting...` and `[worker] scheduled...`, then a `[worker] alive @ <timestamp>` line once per minute. Let it run ~2 minutes to see 2 ticks, then Ctrl+C.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/worker/index.ts package.json package-lock.json
@@ -416,7 +416,7 @@ git commit -m "feat: add worker entry with temporary 1-minute cron tick"
 **Interfaces:**
 - Produces: setup/run instructions a fresh clone can follow; no code interfaces (documentation only).
 
-- [ ] **Step 1: Write README.md**
+- [x] **Step 1: Write README.md**
 
 ```markdown
 # JobPilot
@@ -460,7 +460,7 @@ npm run worker     # separate terminal — ticks every 1 minute, logs "[worker] 
 - \`npm run dev\` — starts with no TypeScript errors
 ```
 
-- [ ] **Step 2: Full clean-slate verification**
+- [x] **Step 2: Full clean-slate verification**
 
 ```bash
 docker compose down -v
@@ -477,7 +477,7 @@ Expected: migration runs clean against a fresh DB, dev server responds 200.
 
 Note: if `db:migrate` complains the migration already exists from Task 2, that's fine — it means the schema is already applied; just confirm `docker compose exec postgres psql -U jobpilot -d jobpilot -c '\dt'` lists `Job`, `Application`, `RunLog`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md
@@ -488,10 +488,10 @@ git commit -m "docs: add Phase 1 README section"
 
 ## Self-Review Checklist (for whoever executes this plan)
 
-- [ ] `docker compose up -d` + `npm run db:migrate` works from a clean clone
-- [ ] Worker ticks and logs "alive" every minute
-- [ ] Seed inserts exactly 3 jobs, idempotently
-- [ ] `npm run dev` compiles and serves with no TS errors
-- [ ] `.env` is gitignored, `.env.example` matches the spec's var list verbatim
-- [ ] `strict: true` in tsconfig.json
-- [ ] All 5 tasks committed separately
+- [x] `docker compose up -d` + `npm run db:migrate` works from a clean clone
+- [x] Worker ticks and logs "alive" every minute
+- [x] Seed inserts exactly 3 jobs, idempotently
+- [x] `npm run dev` compiles and serves with no TS errors
+- [x] `.env` is gitignored, `.env.example` matches the spec's var list verbatim
+- [x] `strict: true` in tsconfig.json
+- [x] All 5 tasks committed separately
