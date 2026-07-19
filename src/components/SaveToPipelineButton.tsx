@@ -9,11 +9,14 @@ export function SaveToPipelineButton({ jobId }: { jobId: string }) {
 
   async function handleClick() {
     try {
-      await fetch("/api/applications", {
+      const response = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId }),
       });
+      if (!response.ok) {
+        throw new Error("Failed to save to pipeline");
+      }
       setError(null);
       router.refresh();
     } catch {

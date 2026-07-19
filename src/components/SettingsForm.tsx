@@ -1,17 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import type { UserProfile } from "@prisma/client";
 
 export function SettingsForm({ profile }: { profile: UserProfile | null }) {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    await fetch("/api/settings", { method: "POST", body: formData });
-    router.refresh();
+    try {
+      const response = await fetch("/api/settings", { method: "POST", body: formData });
+      if (!response.ok) {
+        throw new Error("Failed to save settings");
+      }
+      setError(null);
+      router.refresh();
+    } catch {
+      setError("Failed to save settings — please try again");
+    }
   }
 
   return (
@@ -98,6 +108,7 @@ export function SettingsForm({ profile }: { profile: UserProfile | null }) {
       >
         Save
       </button>
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </form>
   );
 }

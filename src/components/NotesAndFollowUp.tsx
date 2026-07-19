@@ -10,11 +10,14 @@ export function NotesAndFollowUp({ application }: { application: Application }) 
 
   async function handleNotesBlur(event: React.FocusEvent<HTMLTextAreaElement>) {
     try {
-      await fetch(`/api/applications/${application.id}`, {
+      const response = await fetch(`/api/applications/${application.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes: event.target.value }),
       });
+      if (!response.ok) {
+        throw new Error("Failed to save notes");
+      }
       setError(null);
       router.refresh();
     } catch {
@@ -24,11 +27,14 @@ export function NotesAndFollowUp({ application }: { application: Application }) 
 
   async function handleFollowUpChange(event: React.ChangeEvent<HTMLInputElement>) {
     try {
-      await fetch(`/api/applications/${application.id}`, {
+      const response = await fetch(`/api/applications/${application.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ followUpAt: event.target.value || null }),
       });
+      if (!response.ok) {
+        throw new Error("Failed to save follow-up date");
+      }
       setError(null);
       router.refresh();
     } catch {

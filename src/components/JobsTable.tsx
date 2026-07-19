@@ -12,6 +12,7 @@ export function JobsTable({ jobs }: { jobs: JobWithApplication[] }) {
   const router = useRouter();
   const [minScore, setMinScore] = useState("");
   const [source, setSource] = useState("");
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
 
   const sources = useMemo(() => Array.from(new Set(jobs.map((job) => job.source))), [jobs]);
 
@@ -23,12 +24,24 @@ export function JobsTable({ jobs }: { jobs: JobWithApplication[] }) {
 
   async function handleSave(event: React.MouseEvent, jobId: string) {
     event.stopPropagation();
-    await fetch("/api/applications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobId }),
-    });
-    router.refresh();
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save to pipeline");
+      }
+      setSaveErrors((prev) => {
+        const next = { ...prev };
+        delete next[jobId];
+        return next;
+      });
+      router.refresh();
+    } catch {
+      setSaveErrors((prev) => ({ ...prev, [jobId]: "Failed to save to pipeline" }));
+    }
   }
 
   return (
@@ -93,13 +106,18 @@ export function JobsTable({ jobs }: { jobs: JobWithApplication[] }) {
                 {job.application ? (
                   <span className="text-xs text-emerald-700">Saved</span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={(event) => handleSave(event, job.id)}
-                    className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-                  >
-                    Save to pipeline
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={(event) => handleSave(event, job.id)}
+                      className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+                    >
+                      Save to pipeline
+                    </button>
+                    {saveErrors[job.id] && (
+                      <p className="mt-1 text-xs text-red-600">{saveErrors[job.id]}</p>
+                    )}
+                  </>
                 )}
               </td>
             </tr>

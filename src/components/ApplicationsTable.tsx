@@ -145,6 +145,24 @@ export function ApplicationsTable({ applications }: { applications: ApplicationW
           }
           className="w-28 rounded-md border border-slate-200 p-2 text-sm"
         />
+        <label className="flex items-center gap-1 text-sm text-slate-600">
+          Applied after
+          <input
+            type="date"
+            value={filters.appliedAfter}
+            onChange={(event) => setFilters((prev) => ({ ...prev, appliedAfter: event.target.value }))}
+            className="rounded-md border border-slate-200 p-2 text-sm"
+          />
+        </label>
+        <label className="flex items-center gap-1 text-sm text-slate-600">
+          Applied before
+          <input
+            type="date"
+            value={filters.appliedBefore}
+            onChange={(event) => setFilters((prev) => ({ ...prev, appliedBefore: event.target.value }))}
+            className="rounded-md border border-slate-200 p-2 text-sm"
+          />
+        </label>
         <select
           value={sort}
           onChange={(event) => setSort(event.target.value as ApplicationSort)}

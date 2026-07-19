@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Application, Job } from "@prisma/client";
 import { ScoreBadge } from "./ScoreBadge";
@@ -8,15 +9,24 @@ import { SourceBadge } from "./SourceBadge";
 export function SavedJobCard({ application }: { application: Application & { job: Job } }) {
   const router = useRouter();
   const { job } = application;
+  const [error, setError] = useState<string | null>(null);
 
   async function handleMarkApplied(event: React.MouseEvent) {
     event.stopPropagation();
-    await fetch(`/api/applications/${application.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "APPLIED" }),
-    });
-    router.refresh();
+    try {
+      const response = await fetch(`/api/applications/${application.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "APPLIED" }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to mark as applied");
+      }
+      setError(null);
+      router.refresh();
+    } catch {
+      setError("Failed to mark as applied");
+    }
   }
 
   return (
@@ -40,6 +50,7 @@ export function SavedJobCard({ application }: { application: Application & { job
       >
         Mark as Applied
       </button>
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }
