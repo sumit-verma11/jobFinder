@@ -9,7 +9,8 @@
     "lint": "next lint",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "worker": "tsx src/worker/index.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -17,11 +18,13 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "next": "14.2.35",
+    "node-cron": "^4.6.0",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",
