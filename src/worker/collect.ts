@@ -1,7 +1,14 @@
 import { pathToFileURL } from "node:url";
+import type { Source as DbSource } from "@prisma/client";
 import { db } from "../lib/db";
 import { collectFromCareersPage } from "../lib/sources/careersPage";
-import { sources } from "../lib/sources/sources.config";
+import { collectFromGreenhouse } from "../lib/sources/greenhouse";
+import { collectFromLever } from "../lib/sources/lever";
+import { collectFromAshby } from "../lib/sources/ashby";
+import { collectFromWorkable } from "../lib/sources/workable";
+import { collectFromAdzuna } from "../lib/sources/adzuna";
+import { collectFromArbeitnow } from "../lib/sources/arbeitnow";
+import { loadJobTitleKeywords } from "../lib/profile";
 import type { ExtractedJob } from "../lib/sources/types";
 
 const DELAY_BETWEEN_SOURCES_MS = 2_000;
@@ -16,15 +23,17 @@ export async function runCollect(): Promise<void> {
   let jobsNew = 0;
   const errors: string[] = [];
 
-  for (let i = 0; i < sources.length; i++) {
-    const source = sources[i];
+  const companySources = await db.source.findMany();
+
+  for (let i = 0; i < companySources.length; i++) {
+    const source = companySources[i];
     if (i > 0) {
       await sleep(DELAY_BETWEEN_SOURCES_MS);
     }
 
-    console.log(`[collect] fetching ${source.name} (${source.url})`);
+    console.log(`[collect] fetching ${source.name} (${source.kind})`);
     try {
-      const extracted = await collectFromCareersPage(source);
+      const extracted = await collectFromCompanySource(source);
       jobsFound += extracted.length;
       const inserted = await saveNewJobs(source.name, extracted);
       jobsNew += inserted;
@@ -36,7 +45,37 @@ export async function runCollect(): Promise<void> {
     }
   }
 
-  const allFailed = errors.length === sources.length;
+  const keywords = await loadJobTitleKeywords();
+  let aggregatorsRun = 0;
+
+  if (keywords.length > 0) {
+    const aggregators = [
+      { label: "Adzuna", run: () => collectFromAdzuna(keywords) },
+      { label: "Arbeitnow", run: () => collectFromArbeitnow(keywords) },
+    ] as const;
+
+    for (const aggregator of aggregators) {
+      await sleep(DELAY_BETWEEN_SOURCES_MS);
+      console.log(`[collect] fetching ${aggregator.label} (keywords: ${keywords.join(", ")})`);
+      aggregatorsRun++;
+      try {
+        const extracted = await aggregator.run();
+        jobsFound += extracted.length;
+        const inserted = await saveNewJobs(aggregator.label, extracted);
+        jobsNew += inserted;
+        console.log(`[collect] ${aggregator.label}: found ${extracted.length}, ${inserted} new`);
+      } catch (err) {
+        const message = `${aggregator.label}: ${(err as Error).message}`;
+        console.error(`[collect] ${message}`);
+        errors.push(message);
+      }
+    }
+  } else {
+    console.log("[collect] skipping aggregators: no jobTitleKeywords set in /settings");
+  }
+
+  const totalSources = companySources.length + aggregatorsRun;
+  const allFailed = totalSources > 0 && errors.length === totalSources;
   const status = errors.length === 0 ? "SUCCESS" : allFailed ? "FAILED" : "PARTIAL";
 
   await db.runLog.update({
@@ -51,6 +90,30 @@ export async function runCollect(): Promise<void> {
   });
 
   console.log(`[collect] run complete: ${status}, found ${jobsFound}, new ${jobsNew}`);
+}
+
+async function collectFromCompanySource(source: DbSource): Promise<ExtractedJob[]> {
+  if (source.kind === "CAREERS_PAGE") {
+    if (!source.url) {
+      throw new Error(`CAREERS_PAGE source ${source.name} has no url`);
+    }
+    return collectFromCareersPage({ name: source.name, type: "careersPage", url: source.url });
+  }
+
+  if (!source.platform || !source.slug) {
+    throw new Error(`ATS source ${source.name} is missing platform/slug`);
+  }
+
+  switch (source.platform) {
+    case "GREENHOUSE":
+      return collectFromGreenhouse(source.name, source.slug);
+    case "LEVER":
+      return collectFromLever(source.name, source.slug);
+    case "ASHBY":
+      return collectFromAshby(source.name, source.slug);
+    case "WORKABLE":
+      return collectFromWorkable(source.name, source.slug);
+  }
 }
 
 async function saveNewJobs(sourceLabel: string, extracted: ExtractedJob[]): Promise<number> {
