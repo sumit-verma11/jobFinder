@@ -9,10 +9,11 @@ import { sanitizeCoverNote, containsSensitiveInfo } from "../lib/matching/saniti
 import type { JobForMatching } from "../lib/matching/types";
 
 const SCORE_THRESHOLD = Number(process.env.SCORE_THRESHOLD) || 7;
+const MAX_JOBS_SCORED_PER_RUN = Number(process.env.MAX_JOBS_SCORED_PER_RUN) || 20;
 
 export async function runMatch(): Promise<void> {
   const { profileText, styleExamplesText, preferredLocations, workMode } = await loadProfile();
-  const jobs = await db.job.findMany({ where: { score: null } });
+  const jobs = await db.job.findMany({ where: { score: null }, take: MAX_JOBS_SCORED_PER_RUN });
 
   console.log(`[match] scoring ${jobs.length} job(s)`);
 
