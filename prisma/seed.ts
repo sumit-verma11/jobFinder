@@ -64,8 +64,9 @@ async function main() {
     // - Razorpay/Freshworks/BrowserStack/ChargeBee: real Workable accounts (name resolves
     //   correctly) but the public widget endpoint returns an empty jobs[] for every
     //   account tested, including large actively-hiring companies (Canva, Zapier,
-    //   HelloFresh, Monzo) — the endpoint appears deprecated/non-functional for live
-    //   job data, not just a wrong slug. Revisit if Workable's API changes.
+    //   HelloFresh, Monzo) — these accounts currently have zero live Workable-sourced
+    //   postings (likely no longer using Workable as their primary ATS), not a wrong
+    //   slug. Revisit if any of these companies' Workable boards become active again.
   ];
 
   for (const source of sources) {
