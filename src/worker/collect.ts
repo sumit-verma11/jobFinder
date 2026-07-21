@@ -23,6 +23,7 @@ export async function runCollect(): Promise<void> {
   let jobsNew = 0;
   const errors: string[] = [];
 
+  const keywords = await loadJobTitleKeywords();
   const companySources = await db.source.findMany();
 
   for (let i = 0; i < companySources.length; i++) {
@@ -34,10 +35,23 @@ export async function runCollect(): Promise<void> {
     console.log(`[collect] fetching ${source.name} (${source.kind})`);
     try {
       const extracted = await collectFromCompanySource(source);
-      jobsFound += extracted.length;
-      const inserted = await saveNewJobs(source.name, extracted);
+      // ATS boards (Greenhouse/Lever/Ashby/Workable) return every open role at a
+      // company, across every department — unlike careersPage (filtered by its own
+      // LLM prompt) or the aggregators (filtered by keyword query), so without this
+      // filter a single company can flood the Job table with irrelevant roles
+      // (Legal, Sales, etc.) that then sit unscored waiting on match.ts's LLM cap.
+      const relevant =
+        source.kind === "ATS" && keywords.length > 0
+          ? extracted.filter((job) => matchesKeywords(job.title, keywords))
+          : extracted;
+      jobsFound += relevant.length;
+      const inserted = await saveNewJobs(source.name, relevant);
       jobsNew += inserted;
-      console.log(`[collect] ${source.name}: found ${extracted.length}, ${inserted} new`);
+      console.log(
+        `[collect] ${source.name}: found ${extracted.length}` +
+          (relevant.length !== extracted.length ? ` (${relevant.length} matched keywords)` : "") +
+          `, ${inserted} new`
+      );
     } catch (err) {
       const message = `${source.name}: ${(err as Error).message}`;
       console.error(`[collect] ${message}`);
@@ -45,7 +59,6 @@ export async function runCollect(): Promise<void> {
     }
   }
 
-  const keywords = await loadJobTitleKeywords();
   let aggregatorsRun = 0;
 
   if (keywords.length > 0) {
@@ -150,6 +163,11 @@ function parsePostedAt(value: unknown): Date | null {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function matchesKeywords(title: string, keywords: string[]): boolean {
+  const haystack = title.toLowerCase();
+  return keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
