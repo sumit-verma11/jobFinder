@@ -154,3 +154,39 @@ npm run dev    # dashboard at http://localhost:3000
 - Opening a job's Details page generates a cold message automatically within a few seconds, and a cover letter on click if one wasn't already generated at match time
 - `/applications` bulk delete shows a confirmation dialog before removing anything, and CSV export downloads a file with the expected columns
 - `npx tsc --noEmit` passes with no errors, `npm test` passes
+
+## Phase 6 — Multi-Source Job Collection
+
+### Setup
+
+New environment variables (optional — collection works without them, just without Adzuna):
+
+```
+ADZUNA_APP_ID=...
+ADZUNA_APP_KEY=...
+```
+
+Register for a free Adzuna developer account to get these. Arbeitnow needs no key.
+
+### Run
+
+Same as before — `npm run collect` (or the scheduled `npm run worker`) now pulls from every `Source` row in the database plus two aggregators (Adzuna, Arbeitnow), instead of 5 hardcoded URLs.
+
+### Pages
+
+- `/sources` — add/remove companies to track directly, either as a `CAREERS_PAGE` (scraped via LLM, works for any company) or `ATS` (Greenhouse/Lever/Ashby/Workable — structured JSON, more reliable, requires knowing the company's board slug). No code change or redeploy needed to track a new company.
+- `/settings` gains "Job title keywords" (the search terms sent to Adzuna/Arbeitnow, and also used to filter ATS-sourced jobs — see below) and "Current salary" (reference-only, alongside the existing "Expected salary" — neither ever reaches an LLM prompt).
+
+### How sourcing works now
+
+- **ATS sources** (Greenhouse/Lever/Ashby/Workable) return every open role at a company across every department, not just engineering — unlike the careers-page scraper (filtered by its own LLM prompt). To avoid flooding the dashboard with irrelevant roles, ATS results are filtered against `jobTitleKeywords` before being saved: a job is kept only if its title contains at least one of your keywords (case-insensitive). If `jobTitleKeywords` is empty, ATS sources are skipped entirely rather than importing everything unfiltered.
+- **Aggregators** (Adzuna, Arbeitnow) query by your `jobTitleKeywords` directly and are skipped entirely if the list is empty.
+- **`MAX_JOBS_SCORED_PER_RUN`** (default 20, env-overridable) caps how many new jobs `npm run match` scores in one run, so a burst of newly-collected jobs can't exceed the LLM's free-tier rate limit — the rest score on the next scheduled run.
+
+### Verify
+
+- Adding a company on `/sources` and running `npm run collect` picks up its postings on the next run, with no code change; removing a `Source` row stops that company from being checked.
+- With `jobTitleKeywords` set broadly enough to match real title phrasing (e.g. "Software Engineer", not just "Full Stack Developer" verbatim — company titles vary a lot), `npm run collect` pulls in genuinely relevant roles from both ATS sources and the aggregators; clearing the keywords skips both entirely rather than flooding the board.
+- A burst of many new jobs in one run doesn't fire more than `MAX_JOBS_SCORED_PER_RUN` LLM scoring calls in a single `npm run match` — verified live against 34 unscored jobs, which correctly scored exactly 20 in one run.
+- LinkedIn, Naukri, Hirist, Indeed, and Shine are not sources — this was an explicit scope decision (see `docs/superpowers/specs/2026-07-20-jobpilot-phase6-sourcing-design.md`), not an oversight.
+- `npx tsc --noEmit` passes with no errors, `npm test` passes (42 tests across 8 files, including one per new collector)
