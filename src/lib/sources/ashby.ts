@@ -5,8 +5,8 @@ interface AshbyJob {
   title: string;
   jobUrl?: string | null;
   applyUrl?: string | null;
-  locationName?: string | null;
-  publishedDate?: string | null;
+  location?: string | null;
+  publishedAt?: string | null;
 }
 
 interface AshbyResponse {
@@ -22,8 +22,8 @@ export async function collectFromAshby(companyName: string, slug: string): Promi
     title: job.title,
     url: job.jobUrl ?? job.applyUrl ?? "",
     company: companyName,
-    location: job.locationName ?? null,
+    location: job.location ?? null,
     salaryText: null,
-    postedAt: job.publishedDate ?? null,
+    postedAt: job.publishedAt ?? null,
   }));
 }

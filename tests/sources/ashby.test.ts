@@ -7,19 +7,22 @@ describe("collectFromAshby", () => {
   });
 
   it("maps an Ashby job-board response into ExtractedJob[]", async () => {
+    // Field names (location, publishedAt, jobUrl/applyUrl) confirmed against a real
+    // response from https://api.ashbyhq.com/posting-api/job-board/linear during Task 14's
+    // live verification pass — this replaced an earlier guess that used locationName/publishedDate.
     const fakeResponse = {
       jobs: [
         {
           title: "Founding Engineer",
           jobUrl: "https://jobs.ashbyhq.com/acme/abc-123",
-          locationName: "Remote",
-          publishedDate: "2026-07-17T00:00:00.000Z",
+          location: "Remote",
+          publishedAt: "2026-07-17T00:00:00.000Z",
         },
         {
           title: "Backend Engineer",
           applyUrl: "https://jobs.ashbyhq.com/acme/def-456",
-          locationName: null,
-          publishedDate: null,
+          location: null,
+          publishedAt: null,
         },
       ],
     };

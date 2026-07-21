@@ -40,6 +40,41 @@ async function main() {
   }
 
   console.log(`Seeded ${jobs.length} jobs.`);
+
+  const sources: {
+    name: string;
+    kind: "CAREERS_PAGE" | "ATS";
+    url?: string;
+    platform?: "GREENHOUSE" | "LEVER" | "ASHBY" | "WORKABLE";
+    slug?: string;
+  }[] = [
+    { name: "Jellyfish Technologies", kind: "CAREERS_PAGE", url: "https://www.jellyfishtechnologies.com/career/" },
+    { name: "Thrifty AI", kind: "CAREERS_PAGE", url: "https://www.thriftyai.com/" },
+    { name: "GTF Technologies", kind: "CAREERS_PAGE", url: "https://www.gtf-technologies.com/careers" },
+    { name: "Beebom", kind: "CAREERS_PAGE", url: "https://beebom.com/careers/" },
+    { name: "WorldRef", kind: "CAREERS_PAGE", url: "https://www.talentd.worldref.co/" },
+    // Verified live during Task 14 — real job data confirmed at each endpoint.
+    { name: "Postman", kind: "ATS", platform: "GREENHOUSE", slug: "postman" },
+    { name: "Groww", kind: "ATS", platform: "GREENHOUSE", slug: "groww" },
+    { name: "Vercel", kind: "ATS", platform: "GREENHOUSE", slug: "vercel" },
+    { name: "CRED", kind: "ATS", platform: "LEVER", slug: "cred" },
+    { name: "Linear", kind: "ATS", platform: "ASHBY", slug: "linear" },
+    // Not seeded, per Task 14's findings:
+    // - Retool: no slug resolved on Greenhouse, Lever, Ashby, or Workable.
+    // - Razorpay/Freshworks/BrowserStack/ChargeBee: real Workable accounts (name resolves
+    //   correctly) but the public widget endpoint returns an empty jobs[] for every
+    //   account tested, including large actively-hiring companies (Canva, Zapier,
+    //   HelloFresh, Monzo) — the endpoint appears deprecated/non-functional for live
+    //   job data, not just a wrong slug. Revisit if Workable's API changes.
+  ];
+
+  for (const source of sources) {
+    const existing = await db.source.findFirst({ where: { name: source.name } });
+    if (existing) continue;
+    await db.source.create({ data: source });
+  }
+
+  console.log(`Seeded ${sources.length} source(s) (skipping any that already existed).`);
 }
 
 main()
