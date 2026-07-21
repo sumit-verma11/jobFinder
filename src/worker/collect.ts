@@ -40,10 +40,14 @@ export async function runCollect(): Promise<void> {
       // LLM prompt) or the aggregators (filtered by keyword query), so without this
       // filter a single company can flood the Job table with irrelevant roles
       // (Legal, Sales, etc.) that then sit unscored waiting on match.ts's LLM cap.
+      // No keywords set yet means no way to judge relevance, so (consistent with
+      // the aggregator pass below) ATS results are suppressed entirely rather than
+      // imported unfiltered.
       const relevant =
-        source.kind === "ATS" && keywords.length > 0
-          ? extracted.filter((job) => matchesKeywords(job.title, keywords))
-          : extracted;
+        source.kind === "ATS" ? extracted.filter((job) => matchesKeywords(job.title, keywords)) : extracted;
+      if (source.kind === "ATS" && keywords.length === 0 && extracted.length > 0) {
+        console.log(`[collect] ${source.name}: skipping ${extracted.length} job(s), no jobTitleKeywords set in /settings`);
+      }
       jobsFound += relevant.length;
       const inserted = await saveNewJobs(source.name, relevant);
       jobsNew += inserted;
