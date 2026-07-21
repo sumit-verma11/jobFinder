@@ -8,6 +8,7 @@ import { collectFromAshby } from "../lib/sources/ashby";
 import { collectFromWorkable } from "../lib/sources/workable";
 import { collectFromAdzuna } from "../lib/sources/adzuna";
 import { collectFromArbeitnow } from "../lib/sources/arbeitnow";
+import { matchesKeywords } from "../lib/sources/keywordFilter";
 import { loadJobTitleKeywords } from "../lib/profile";
 import type { ExtractedJob } from "../lib/sources/types";
 
@@ -32,22 +33,26 @@ export async function runCollect(): Promise<void> {
       await sleep(DELAY_BETWEEN_SOURCES_MS);
     }
 
+    // No keywords set means no way to judge relevance for any source type — careersPage
+    // bakes keywords directly into its LLM extraction prompt, ATS boards return every
+    // role at a company regardless of department, so both are skipped entirely rather
+    // than fetched unfiltered (consistent with how the aggregator pass below behaves
+    // under the identical condition).
+    if (keywords.length === 0) {
+      console.log(`[collect] skipping ${source.name} (${source.kind}): no jobTitleKeywords set in /settings`);
+      continue;
+    }
+
     console.log(`[collect] fetching ${source.name} (${source.kind})`);
     try {
-      const extracted = await collectFromCompanySource(source);
+      const extracted = await collectFromCompanySource(source, keywords);
       // ATS boards (Greenhouse/Lever/Ashby/Workable) return every open role at a
-      // company, across every department — unlike careersPage (filtered by its own
-      // LLM prompt) or the aggregators (filtered by keyword query), so without this
-      // filter a single company can flood the Job table with irrelevant roles
-      // (Legal, Sales, etc.) that then sit unscored waiting on match.ts's LLM cap.
-      // No keywords set yet means no way to judge relevance, so (consistent with
-      // the aggregator pass below) ATS results are suppressed entirely rather than
-      // imported unfiltered.
+      // company, across every department, with no server-side or prompt-level way to
+      // filter — unlike careersPage (keywords baked into the LLM extraction prompt) or
+      // the aggregators (filtered by keyword query) — so ATS results are filtered here,
+      // after the fact, against the same keywords.
       const relevant =
         source.kind === "ATS" ? extracted.filter((job) => matchesKeywords(job.title, keywords)) : extracted;
-      if (source.kind === "ATS" && keywords.length === 0 && extracted.length > 0) {
-        console.log(`[collect] ${source.name}: skipping ${extracted.length} job(s), no jobTitleKeywords set in /settings`);
-      }
       jobsFound += relevant.length;
       const inserted = await saveNewJobs(source.name, relevant);
       jobsNew += inserted;
@@ -109,12 +114,12 @@ export async function runCollect(): Promise<void> {
   console.log(`[collect] run complete: ${status}, found ${jobsFound}, new ${jobsNew}`);
 }
 
-async function collectFromCompanySource(source: DbSource): Promise<ExtractedJob[]> {
+async function collectFromCompanySource(source: DbSource, keywords: string[]): Promise<ExtractedJob[]> {
   if (source.kind === "CAREERS_PAGE") {
     if (!source.url) {
       throw new Error(`CAREERS_PAGE source ${source.name} has no url`);
     }
-    return collectFromCareersPage({ name: source.name, type: "careersPage", url: source.url });
+    return collectFromCareersPage({ name: source.name, type: "careersPage", url: source.url }, keywords);
   }
 
   if (!source.platform || !source.slug) {
@@ -167,11 +172,6 @@ function parsePostedAt(value: unknown): Date | null {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function matchesKeywords(title: string, keywords: string[]): boolean {
-  const haystack = title.toLowerCase();
-  return keywords.some((keyword) => haystack.includes(keyword.toLowerCase()));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

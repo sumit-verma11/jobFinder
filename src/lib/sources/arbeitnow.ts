@@ -1,4 +1,5 @@
 import { fetchJson } from "./httpJson";
+import { matchesKeywords } from "./keywordFilter";
 import type { ExtractedJob } from "./types";
 
 interface ArbeitnowJob {
@@ -15,10 +16,9 @@ interface ArbeitnowResponse {
 
 export async function collectFromArbeitnow(keywords: string[]): Promise<ExtractedJob[]> {
   const data = await fetchJson<ArbeitnowResponse>("https://www.arbeitnow.com/api/job-board-api");
-  const needles = keywords.map((keyword) => keyword.toLowerCase());
 
   return data.data
-    .filter((job) => needles.some((needle) => job.title.toLowerCase().includes(needle)))
+    .filter((job) => matchesKeywords(job.title, keywords))
     .map((job) => ({
       title: job.title,
       url: job.url,
