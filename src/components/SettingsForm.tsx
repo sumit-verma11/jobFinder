@@ -84,6 +84,16 @@ export function SettingsForm({ profile }: { profile: UserProfile | null }) {
       </label>
 
       <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-slate-700">Current salary</span>
+        <input
+          type="text"
+          name="currentSalary"
+          defaultValue={profile?.currentSalary ?? ""}
+          className="rounded-md border border-slate-200 p-2 text-sm"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-slate-700">Expected salary</span>
         <input
           type="text"

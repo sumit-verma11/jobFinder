@@ -13,6 +13,7 @@ export interface ProfileInput {
   styleExamplesText: string;
   preferredLocations: string[];
   workMode: WorkMode;
+  currentSalary: string | null;
   expectedSalary: string | null;
   noticePeriod: string | null;
   jobTitleKeywords: string[];
@@ -51,6 +52,7 @@ export async function saveProfile(input: ProfileInput): Promise<void> {
       styleExamplesText: input.styleExamplesText,
       preferredLocations: input.preferredLocations,
       workMode: input.workMode,
+      currentSalary: input.currentSalary,
       expectedSalary: input.expectedSalary,
       noticePeriod: input.noticePeriod,
       jobTitleKeywords: input.jobTitleKeywords,
@@ -61,6 +63,7 @@ export async function saveProfile(input: ProfileInput): Promise<void> {
       styleExamplesText: input.styleExamplesText,
       preferredLocations: input.preferredLocations,
       workMode: input.workMode,
+      currentSalary: input.currentSalary,
       expectedSalary: input.expectedSalary,
       noticePeriod: input.noticePeriod,
       jobTitleKeywords: input.jobTitleKeywords,

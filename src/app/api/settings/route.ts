@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       .map((keyword) => keyword.trim())
       .filter(Boolean);
     const workMode = String(form.get("workMode") ?? "REMOTE") as WorkMode;
+    const currentSalary = String(form.get("currentSalary") ?? "").trim() || null;
     const expectedSalary = String(form.get("expectedSalary") ?? "").trim() || null;
     const noticePeriod = String(form.get("noticePeriod") ?? "").trim() || null;
 
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       preferredLocations,
       jobTitleKeywords,
       workMode,
+      currentSalary,
       expectedSalary,
       noticePeriod,
       ...resumeFields,
